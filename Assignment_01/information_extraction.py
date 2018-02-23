@@ -247,106 +247,125 @@ def make_sentence_from_triplet(triplet):
     return triplet.subject + ' ' + triplet.predicate + ' ' + triplet.object
 def answer_question(question):
     cl = ClausIE.get_instance()
-    q_trip = cl.extract_triples([preprocess_question(question)])[0]
-    triplet_sentence = make_sentence_from_triplet(q_trip) + '?'
-    doc = nlp(unicode(triplet_sentence))
+    # q_trip = cl.extract_triples([preprocess_question(question)])[0]
+    # triplet_sentence = make_sentence_from_triplet(q_trip) + '?'
+    # doc = nlp(unicode(triplet_sentence))
+    doc = nlp(unicode(question))
     root = doc[:].root
-    for t in doc:
-        if t.pos_ == 'ADV':
-            adv = t
-    # (WHO, has, PET)
-    # here's one just for dogs
-    if q_trip.subject.lower() == 'who' and q_trip.object == 'dog':
-        answer = '{} has a {} named {}.'
-        # answer_set = set()
-        for person in persons:
-            pet = get_persons_pet(person.name)
-            if pet and pet.type == 'dog':
-                print(answer.format(person.name, 'dog', pet.name))
-    # here's one just for cats
-    elif q_trip.subject.lower() == 'who' and q_trip.object == 'cat':
-        answer = '{} has a {} named {}.'
-        # answer_set = set()
-        for person in persons:
-            pet = get_persons_pet(person.name)
-            if pet and pet.type == 'cat':
-                print(answer.format(person.name, 'cat', pet.name))
-
-    # predicate includes like
-    elif 'like' in q_trip.predicate:
-        # Who likes Mary?
-        if q_trip.subject.lower() == 'who':
-            answer_set = set()
-            answer = '{} likes {}.'
-
-            liked_person = select_person(q_trip.object)
-
-            for person in persons:
-                if person.name != q_trip.object and liked_person in person.likes:
-                    new_answer = answer.format(person.name, liked_person.name)
-                    answer_set.add(new_answer)
-            print(answer_set if len(answer_set) != 0 else 'I dont know!')
-        # Who does Joe like?
-        elif q_trip.object.lower() == 'who':
-            answer = '{} likes {}.'
-
-            like_person = select_person(q_trip.subject)  # q.trip.subject == 'Joe'
-
-            for person in persons:
-                if person.name == q_trip.subject:
-                    for p in person.likes:
-                        print(answer.format(like_person, p.name))
-        # Does Bob like Sally?
-        elif doc[1].ent_type_ == 'PERSON' and doc[3].ent_type_ == 'PERSON':
-            subject = doc[1].text
-            oobject = doc[3].text
-            answer_set = set()
-            answer = '{} {} likes {}.'
-            for person in persons:
-                # print('Persons Name: '+person.name)
-                # print('Question subject ' + subject)
-                if person.name == subject:
-                    for p in person.likes:
-                        # print('Liked name: '+p.name)
-                        # print('Liked name in question '+oobject)
-                        if oobject == p.name:
-                            new_answer = answer.format('Yes', subject, oobject)
-                            answer_set.add(new_answer)
-            print(answer_set if len(answer_set) != 0 else 'I dont know!')
-            # new_answer  = answer.format('Yes,', subject, oobject)
-            # answer_set.add(new_answer)
-            # print(answer_set)
-    # (WHO, going to| flying to| travelling to| visiting, PLACE)
-    elif q_trip.subject.lower() == 'who':
-        ent = [str(ent.text) for ent in doc.ents if ent.label_ == 'GPE']
-        answer_set = set()
-        answer = '{} {} to {}.'
-        if ent:
-            for person in persons:
-                person = select_person(person.name)
-                for trip in person.travels:
-                    if ent == trip.departs_to:
-                        new_answer = answer.format(person.name, root, ent[0])
-                        answer_set.add(new_answer)
-            print(answer_set)
+    if root.text == "'s" and doc[-2].dep_ == 'pobj' and [t.text for t in doc.ents if t.label_ == 'PERSON']:
+        answer = '{} has a {} named {}'
+        ss = [t.text for t in doc.ents if t.label_ == 'PERSON'][0]
+        pet = get_persons_pet(ss)
+        if pet.type == doc[-2].text:
+                print(answer.format(ss, doc[-2], pet.name))
         else:
             print('I dont know!')
-    elif str(adv.lemma_) == 'when':
-        ent = [str(ent.text) for ent in doc.ents if ent.label_ == 'GPE']
-        answer_set = set()
-        answer = '{} {} to {} on {}.'
-        if ent:
+    else:
+        q_trip = cl.extract_triples([preprocess_question(question)])[0]
+        triplet_sentence = make_sentence_from_triplet(q_trip) + '?'
+        doc = nlp(unicode(triplet_sentence))
+        doc = nlp(unicode(question))
+        root = doc[:].root
+        adv = doc[0]
+        for t in doc:
+            if t.pos_ == 'ADV':
+                adv = t
+
+        # (WHO, has, PET)
+        # here's one just for dogs
+        if q_trip.subject.lower() == 'who' and q_trip.object == 'dog':
+            answer = '{} has a {} named {}.'
+            # answer_set = set()
             for person in persons:
-                person = select_person(person.name)
-                if q_trip.subject in person.name:
+                pet = get_persons_pet(person.name)
+                if pet and pet.type == 'dog':
+                    print(answer.format(person.name, 'dog', pet.name))
+        # here's one just for cats
+        elif q_trip.subject.lower() == 'who' and q_trip.object == 'cat':
+            answer = '{} has a {} named {}.'
+            # answer_set = set()
+            for person in persons:
+                pet = get_persons_pet(person.name)
+                if pet and pet.type == 'cat':
+                    print(answer.format(person.name, 'cat', pet.name))
+
+        # predicate includes like
+        elif 'like' in q_trip.predicate:
+            # Who likes Mary?
+            if q_trip.subject.lower() == 'who':
+                answer_set = set()
+                answer = '{} likes {}.'
+
+                liked_person = select_person(q_trip.object)
+
+                for person in persons:
+                    if person.name != q_trip.object and liked_person in person.likes:
+                        new_answer = answer.format(person.name, liked_person.name)
+                        answer_set.add(new_answer)
+                print(answer_set if len(answer_set) != 0 else 'I dont know!')
+            # Who does Joe like?
+            elif q_trip.object.lower() == 'who':
+                answer = '{} likes {}.'
+
+                like_person = select_person(q_trip.subject)  # q.trip.subject == 'Joe'
+
+                for person in persons:
+                    if person.name == q_trip.subject:
+                        for p in person.likes:
+                            print(answer.format(like_person, p.name))
+            # Does Bob like Sally?
+            elif doc[1].ent_type_ == 'PERSON' and doc[3].ent_type_ == 'PERSON':
+                subject = doc[1].text
+                oobject = doc[3].text
+                answer_set = set()
+                answer = '{} {} likes {}.'
+                for person in persons:
+                    # print('Persons Name: '+person.name)
+                    # print('Question subject ' + subject)
+                    if person.name == subject:
+                        for p in person.likes:
+                            # print('Liked name: '+p.name)
+                            # print('Liked name in question '+oobject)
+                            if oobject == p.name:
+                                new_answer = answer.format('Yes', subject, oobject)
+                                answer_set.add(new_answer)
+                print(answer_set if len(answer_set) != 0 else 'I dont know!')
+                # new_answer  = answer.format('Yes,', subject, oobject)
+                # answer_set.add(new_answer)
+                # print(answer_set)
+        # (WHO, going to| flying to| travelling to| visiting, PLACE)
+        elif q_trip.subject.lower() == 'who':
+            ent = [str(ent.text) for ent in doc.ents if ent.label_ == 'GPE']
+            answer_set = set()
+            answer = '{} {} to {}.'
+            if ent:
+                for person in persons:
+                    person = select_person(person.name)
                     for trip in person.travels:
                         if ent == trip.departs_to:
-                            new_answer = answer.format(person.name, root, ent[0], trip.departs_on[0])
-                            # answer_set.append(new_answer) if new_answer not in answer_set
+                            new_answer = answer.format(person.name, root, ent[0])
                             answer_set.add(new_answer)
-            print(answer_set if len(answer_set) != 0 else 'I dont know!')
-    else:
-        print('I dont know!')
+                print(answer_set)
+            else:
+                print('I dont know!')
+        # When is someone going to smplace
+        elif str(adv.lemma_) == 'when':
+            ent = [str(ent.text) for ent in doc.ents if ent.label_ == 'GPE']
+            answer_set = set()
+            answer = '{} {} to {} on {}.'
+            if ent:
+                for person in persons:
+                    person = select_person(person.name)
+                    if q_trip.subject in person.name:
+                        for trip in person.travels:
+                            if ent == trip.departs_to:
+                                new_answer = answer.format(person.name, root, ent[0], trip.departs_on[0])
+                                # answer_set.append(new_answer) if new_answer not in answer_set
+                                answer_set.add(new_answer)
+                print(answer_set if len(answer_set) != 0 else 'I dont know!')
+
+        else:
+            print('I dont know!')
 
 def main():
     sents = get_data_from_file()

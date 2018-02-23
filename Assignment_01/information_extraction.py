@@ -159,14 +159,20 @@ def process_data_from_input_file(triplet):
     if root.lemma_ == 'be' and triplet.object.startswith('friends with'):
         fw_doc = nlp(unicode(triplet.object))
         with_token = [t for t in fw_doc if t.text == 'with'][0]
-        fw_who = [t for t in with_token.children if t.dep_ == 'pobj'][0].text
+        # get text after with
+        after_with = fw_doc.text.split(with_token.text+ ' ')[1]
+        people = []
+        for p in after_with.split(' '):
+            if nlp(p)[0].tag_ == 'NNP':
+                people.append(nlp(p)[0].text)
+        # fw_who = [t for t in with_token.children if t.dep_ == 'pobj'][0].text
         # fw_who = [e for e in fw_doc.ents if e.label_ == 'PERSON'][0].text
-
-        if triplet.subject in [e.text for e in doc.ents if e.label_ == 'PERSON'] and fw_who in [e.text for e in doc.ents if e.label_ == 'PERSON']:
-            s = add_person(triplet.subject)
-            o = add_person(fw_who)
-            s.likes.append(o)
-            o.likes.append(s)
+        for p in people:
+            if triplet.subject in [e.text for e in doc.ents if e.label_ == 'PERSON']:
+                s = add_person(triplet.subject)
+                o = add_person(p)
+                s.likes.append(o)
+                o.likes.append(s)
     if root.lemma_ == 'be' and triplet.object == 'friends':
         fw_doc = nlp(unicode(triplet.subject))
         and_token = [t for t in fw_doc if t.text == 'and']
@@ -374,7 +380,7 @@ def main():
     triples = cl.extract_triples(sents)
     for t in triples:
         r = process_data_from_input_file(t)
-    # samp = process_relation_triplet(triples[12])
+    # samp = process_data_from_input_file(triples[30])
     # samp1 = process_relation_triplet(triples[15])
     # doc = process_relation_triplet(u'Sally is going to Mexico some time in 2020.')
     question = ' '
